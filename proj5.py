@@ -9,14 +9,20 @@ Preface: ...?
 """
 import scipy as sp
 import math
+from math import pi, e, sqrt
 import numpy as np
-from numpy.linalg import inv
+from numpy.linalg import inv, solve
+import matplotlib.pyplot as plt
 
 # Set up our constants
 dx = 1 / 1000
 alpha = 1 / (2 * (dx ** 2))
 dt = 1 / 1000
-x_domain = [i for i in range(-40, 40)]
+x_domain = [i for i in range(-200, 200)]
+
+x0 = 0
+k0 = 0
+sigma = 0.05
 
 
 def main():
@@ -47,12 +53,33 @@ def main():
     # Take the inverse
     ham_inverse = inv(hamiltonian)
 
-    print(hamiltonian)
-    print('inverse', ham_inverse)
+    print('Hamiltonian', hamiltonian)
+    print('Hamiltonian Inverse', ham_inverse)
+
+    # Prepare a wavepacket, show the graph
+    x = np.arange(-200, 200, 1)
+    y = [wavepacket(i, x0, k0, sigma) for i in x]
+    plt.plot(x, y)
+    plt.xlabel('X')
+    plt.ylabel('Psi')
+    plt.title('Wavepacket')
+    plt.show()
+
+    # Dot multiplication of the hamiltonian matrix, for 100 iterations
+    psi_result = []
+    psi_multiplier = y
+
+    for _ in range(100):
+        psi_iteration = np.dot(ham_inverse, psi_multiplier).flatten(order='K').tolist()[0]
+        psi_result.append(psi_iteration)
+        psi_multiplier = psi_iteration
+
+        plt.plot(x, psi_iteration)
+        plt.show()
 
 
 def wavepacket(x, x0, k0, sigma):
-    return (math.e ** (0.25 * (x - x0) * (4j * k0 + (-1 * x + x0) * (sigma ** 2))) * (math.pi ** 0.5) * sigma) / (math.sqrt(math.sqrt(2) * (math.pi ** (3/2) * sigma)))
+    return (e ** (0.25 * (x - x0) * (4j * k0 + (-1 * x + x0) * (sigma ** 2))) * (pi ** 0.5) * sigma) / (sqrt(sqrt(2) * (pi ** (3/2) * sigma)))
 
 
 def v_free(x):
