@@ -13,17 +13,18 @@ from math import pi, e, sqrt
 import numpy as np
 from numpy.linalg import inv, solve
 import matplotlib.pyplot as plt
+from matplotlib import animation
 
 
 # Set up our constants
-dx = 80 / 1000
+dx = 40.0 / 1000
 alpha = 1 / (2 * (dx ** 2))
-dt = 80 / 1000
+dt = 80.0 / 1000
 x_domain = (-40, 40)
 
 x0 = 0
-k0 = 2.5
-sigma = 1
+k0 = 8
+sigma = 4
 
 
 def main():
@@ -66,14 +67,6 @@ def main():
     # Prepare a wavepacket, show the graph
     x = np.arange(x_domain[0], x_domain[1], dx)
     y = [wavepacket(i, x0, k0, sigma) for i in x]
-    plt.plot(x, y)
-    plt.plot(x, np.real(y), color='b')
-    plt.plot(x, np.imag(y), color='g')
-    plt.xlabel('X')
-    plt.ylim([-1.5, 1.55])
-    plt.ylabel('Psi')
-    plt.title('Wavepacket')
-    plt.show()
 
     # Dot multiplication of the hamiltonian matrix, for 100 iterations
     psi_result = []
@@ -84,15 +77,41 @@ def main():
         print(ham_inverse.shape)
         print(psi_multiplier.shape)
         psi_iteration = np.dot(ham_inverse, psi_multiplier)
+        psi_result.append(psi_iteration)
         psi_multiplier = psi_iteration
+        
+    # Animation
+    
+    fig = plt.figure()
+    ax = plt.axes(xlim=(-5, 5), ylim=(-1, 1))
+    real_line, = ax.plot([], [], 'b', lw=1)
+    im_line, = ax.plot([],[], 'g', lw=1)
+    prob_line, = ax.plot([],[], 'r', lw=1)
+    
+    def init():
+        real_line.set_data([], [])
+        im_line.set_data([],[])
+        prob_line.set_data([],[])
+        return real_line, im_line, prob_line
 
-        # plt.plot(x, (np.absolute(psi_iteration) ** 2), color='r')
-        plt.plot(x, np.real(psi_iteration), color='b')
-        plt.plot(x, np.imag(psi_iteration), color='g')
-        plt.xlim([-20, 20])
-        plt.ylim([-1.5, 1.55])
-        plt.show()
-
+    # Animation function
+    def animate(i, *fargs):
+        x = fargs[0]
+        psi = fargs[1]
+        real_line.set_data(x, np.real(psi[i]))
+        im_line.set_data(x, np.imag(psi[i]))
+        prob_line.set_data(x, np.absolute(psi[i]))
+        return real_line, im_line, prob_line
+    
+    # Call the animator
+    anim = animation.FuncAnimation(fig, animate, init_func=init, fargs=[x,psi_result],
+                                   frames=20)
+   
+    #Save the animation                               
+    #anim.save('animation.mp4', fps=5, extra_args=['-vcodec', 'libx264'])
+    
+    #Show the animation
+    plt.show()
 
 def wavepacket(x, x0, k0, sigma):
     return (e ** (0.25 * (x - x0) * (4j * k0 + (-1 * x + x0) * (sigma ** 2))) * (pi ** 0.5) * sigma) / (sqrt(sqrt(2) * (pi ** (3/2) * sigma)))
