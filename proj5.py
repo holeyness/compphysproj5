@@ -48,18 +48,17 @@ def main():
     hamiltonian[-1, 0] = -1 * alpha
     hamiltonian[0, -1] = -1 * alpha
 
-
     # Lets turn this imaginary, and add 1
-    hamiltonian = 1j * dt * np.array(hamiltonian)
-    for (x, y), val in np.ndenumerate(hamiltonian):
+    H1 = 1j * dt * np.array(hamiltonian)
+    for (x, y), val in np.ndenumerate(H1):
         if val != 0:
-            hamiltonian[x, y] += 1
-    # hamiltonian = 1 + np.array(hamiltonian)
-    hamiltonian = np.matrix(hamiltonian)
-    print(hamiltonian)
+            H1[x, y] += 1
+    H1 = np.matrix(H1)
+
+    print(H1)
 
     # Take the inverse
-    ham_inverse = inv(hamiltonian)
+    ham_inverse = inv(H1)
 
     # print('Hamiltonian', hamiltonian)
     print('Hamiltonian Inverse', ham_inverse)
@@ -72,16 +71,13 @@ def main():
     psi_result = []
     psi_multiplier = np.matrix(y).transpose()
 
-
     for _ in range(100):
-        print(ham_inverse.shape)
-        print(psi_multiplier.shape)
         psi_iteration = np.dot(ham_inverse, psi_multiplier)
         psi_result.append(psi_iteration)
         psi_multiplier = psi_iteration
         
     # Animation
-    
+
     fig = plt.figure()
     ax = plt.axes(xlim=(-5, 5), ylim=(-1, 1))
     real_line, = ax.plot([], [], 'b', lw=1)
@@ -96,22 +92,59 @@ def main():
 
     # Animation function
     def animate(i, *fargs):
-        x = fargs[0]
+        x_list = fargs[0]
         psi = fargs[1]
-        real_line.set_data(x, np.real(psi[i]))
-        im_line.set_data(x, np.imag(psi[i]))
-        prob_line.set_data(x, np.absolute(psi[i]))
+        real_line.set_data(x_list, np.real(psi[i]))
+        im_line.set_data(x_list, np.imag(psi[i]))
+        prob_line.set_data(x_list, np.absolute(psi[i]))
         return real_line, im_line, prob_line
     
     # Call the animator
-    anim = animation.FuncAnimation(fig, animate, init_func=init, fargs=[x,psi_result],
-                                   frames=20)
+    anim = animation.FuncAnimation(fig, animate, init_func=init, fargs=[x, psi_result], interval=500,
+                                   frames=10)
    
     #Save the animation                               
     #anim.save('animation.mp4', fps=5, extra_args=['-vcodec', 'libx264'])
     
     #Show the animation
     plt.show()
+
+    """THE NON-NAIVE Method
+    cuz let's be real, we are all adults here"""
+    rhs_multiplier = 1j * (0.5) * dt * np.array(hamiltonian)
+    rhs_multiplier = np.matrix(rhs_multiplier)
+    for (x_index, y_index), val in np.ndenumerate(rhs_multiplier):
+        if val != 0.0:
+            rhs_multiplier[x_index, y_index] = 1 - val
+    rhs_multiplier = np.matrix(rhs_multiplier)
+    rhs = np.dot(rhs_multiplier, np.matrix(y).transpose())
+
+    lhs_multiplier = (0.5) * (1j) * dt * np.array(hamiltonian)
+    lhs_multiplier = np.matrix(lhs_multiplier)
+    for (x_index, y_index), val in np.ndenumerate(lhs_multiplier):
+        if val != 0.0:
+            lhs_multiplier[x_index, y_index] = 1 + val
+    lhs_multiplier = np.matrix(lhs_multiplier)
+
+    print(rhs_multiplier)
+    print(lhs_multiplier)
+
+    results = []
+    for _ in range(100):
+        next_step = solve(lhs_multiplier, rhs)
+        results.append(next_step)
+        rhs = np.dot(rhs_multiplier, next_step)
+
+    fig = plt.figure()
+    ax = plt.axes(xlim=(-20, 20), ylim=(-3, 3))
+    real_line, = ax.plot([], [], 'b', lw=1)
+    im_line, = ax.plot([],[], 'g', lw=1)
+    prob_line, = ax.plot([],[], 'r', lw=1)
+
+    anim = animation.FuncAnimation(fig, animate, init_func=init, fargs=[x, results], interval=100, frames=50)
+
+    plt.show()
+
 
 def wavepacket(x, x0, k0, sigma):
     return (e ** (0.25 * (x - x0) * (4j * k0 + (-1 * x + x0) * (sigma ** 2))) * (pi ** 0.5) * sigma) / (sqrt(sqrt(2) * (pi ** (3/2) * sigma)))
