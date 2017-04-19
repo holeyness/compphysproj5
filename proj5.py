@@ -17,14 +17,21 @@ from matplotlib import animation
 
 
 # Set up our constants
-dx = 40.0 / 1000
+dx = 80.0 / 1000
 alpha = 1 / (2 * (dx ** 2))
 dt = 80.0 / 1000
 x_domain = (-40, 40)
 
-x0 = 0
-k0 = 8
-sigma = 4
+
+# Wave packet configs
+x0 = -1.0
+k0 = 3.59
+sigma = 0.89
+
+# Barrier Config
+a = 10
+b = 0.105
+xv0 = 5
 
 
 def main():
@@ -36,7 +43,7 @@ def main():
     for (x, y), _ in np.ndenumerate(hamiltonian):
         if x == y:
             # Set diagnoal elements
-            hamiltonian[x, y] = 2 * alpha + v_free(y)
+            hamiltonian[x, y] = 2 * alpha + v_barrier(y)
         elif x < size and y - x == 1:
             # The element to the right of each diag element
             hamiltonian[x, y] = -1 * alpha
@@ -48,11 +55,14 @@ def main():
     hamiltonian[-1, 0] = -1 * alpha
     hamiltonian[0, -1] = -1 * alpha
 
+    print(hamiltonian)
+
     # Lets turn this imaginary, and add 1
     H1 = 1j * dt * np.array(hamiltonian)
-    for (x, y), val in np.ndenumerate(H1):
-        if val != 0:
-            H1[x, y] += 1
+    for (x_index, y_index), val in np.ndenumerate(H1):
+        if x_index == y_index:
+            # Apply on diag
+            H1[x_index, y_index] += 1
     H1 = np.matrix(H1)
 
     print(H1)
@@ -65,6 +75,7 @@ def main():
 
     # Prepare a wavepacket, show the graph
     x = np.arange(x_domain[0], x_domain[1], dx)
+    print(len(x))
     y = [wavepacket(i, x0, k0, sigma) for i in x]
 
     # Dot multiplication of the hamiltonian matrix, for 100 iterations
@@ -111,18 +122,18 @@ def main():
 
     """THE NON-NAIVE Method
     cuz let's be real, we are all adults here"""
-    rhs_multiplier = 1j * (0.5) * dt * np.array(hamiltonian)
+    rhs_multiplier = 1j * -0.5 * dt * np.array(hamiltonian)
     rhs_multiplier = np.matrix(rhs_multiplier)
     for (x_index, y_index), val in np.ndenumerate(rhs_multiplier):
-        if val != 0.0:
-            rhs_multiplier[x_index, y_index] = 1 - val
+        if x_index == y_index:
+            rhs_multiplier[x_index, y_index] = 1 + val
     rhs_multiplier = np.matrix(rhs_multiplier)
     rhs = np.dot(rhs_multiplier, np.matrix(y).transpose())
 
-    lhs_multiplier = (0.5) * (1j) * dt * np.array(hamiltonian)
+    lhs_multiplier = 0.5 * 1j * dt * np.array(hamiltonian)
     lhs_multiplier = np.matrix(lhs_multiplier)
     for (x_index, y_index), val in np.ndenumerate(lhs_multiplier):
-        if val != 0.0:
+        if x_index == y_index:
             lhs_multiplier[x_index, y_index] = 1 + val
     lhs_multiplier = np.matrix(lhs_multiplier)
 
@@ -141,7 +152,7 @@ def main():
     im_line, = ax.plot([],[], 'g', lw=1)
     prob_line, = ax.plot([],[], 'r', lw=1)
 
-    anim = animation.FuncAnimation(fig, animate, init_func=init, fargs=[x, results], interval=100, frames=50)
+    anim = animation.FuncAnimation(fig, animate, init_func=init, fargs=[x, results], interval=100, frames=len(x))
 
     plt.show()
 
@@ -156,10 +167,38 @@ def v_free(x):
 
 
 def v_step(x):
+    """Step"""
     if x < 0:
         return 0
     else:
         return 1
+
+
+def v_ho(x):
+    """Harmonic oscillator"""
+    return np.square(x)
+
+
+def v_barrier(x):
+    """Barrier potential"""
+    if (0.0 + xv0) < x:
+        return a
+    else:
+        return 0
+
+
+def v_crystal(x):
+    """Crystal"""
+    if x > 0 and (x // 1) % 2 == 0.0:
+        return -1
+    else:
+        return 0
+
+def v_well(x):
+    if x > 1 or x < -1:
+        return 99999999999999999
+    else:
+        return 0
 
 if __name__ == "__main__":
     main()
